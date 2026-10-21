@@ -17,6 +17,7 @@ import {
   Keyboard,
   Clock,
   Flame,
+  Timer,
 } from 'lucide-react';
 
 export const CeremonyControls = ({
@@ -35,6 +36,7 @@ export const CeremonyControls = ({
     currentTeam,
     sequenceSteps,
     isPaused,
+    currentStepDuration,
     startCeremony,
     togglePause,
     nextStep,
@@ -68,11 +70,15 @@ export const CeremonyControls = ({
       case CEREMONY_PHASES.COUNTDOWN:
         return { label: 'شمارش معکوس', color: 'bg-cyan-600 text-white animate-pulse' };
       case CEREMONY_PHASES.SCROLLING:
-        return { label: 'اسکرول نام‌ها', color: 'bg-indigo-600 text-white' };
+        return { label: 'اسکرول پرسرعت نام‌ها', color: 'bg-indigo-600 text-white animate-pulse' };
+      case CEREMONY_PHASES.TEASING:
+        return { label: 'تله و کاهش فریبنده سرعت!', color: 'bg-amber-600 text-white animate-bounce' };
+      case CEREMONY_PHASES.REACCEL:
+        return { label: 'شتاب ناگهانی مجدد گردونه', color: 'bg-purple-600 text-white animate-pulse' };
       case CEREMONY_PHASES.SLOWING:
-        return { label: 'کاهش سرعت اسکرول', color: 'bg-purple-600 text-white' };
+        return { label: 'کاهش سرعت نهایی و رایزر', color: 'bg-orange-600 text-white' };
       case CEREMONY_PHASES.DRAMATIC_PAUSE:
-        return { label: 'مکث نهایی پیش از رونمایی', color: 'bg-amber-600 text-white' };
+        return { label: 'سکوت و مکث نفس‌گیر نهایی', color: 'bg-yellow-400 text-slate-950 font-black animate-pulse' };
       case CEREMONY_PHASES.REVEAL:
       case CEREMONY_PHASES.HOLDING:
         return { label: `رونمایی ${getRankLabel(currentStep.rank)}`, color: 'bg-emerald-600 text-white' };
@@ -80,8 +86,6 @@ export const CeremonyControls = ({
         return { label: 'آماده‌سازی فینال ۲ تیم برتر', color: 'bg-amber-500 text-slate-950 font-bold' };
       case CEREMONY_PHASES.CHAMPION_REVEAL:
         return { label: 'رونمایی قهرمان مسابقه (رتبه اول)', color: 'bg-yellow-400 text-slate-950 font-black' };
-      case CEREMONY_PHASES.RUNNER_UP_REVEAL:
-        return { label: 'رونمایی نایب‌قهرمان (رتبه دوم)', color: 'bg-slate-300 text-slate-950 font-black' };
       case CEREMONY_PHASES.FINAL_TABLE:
         return { label: 'جدول کامل ۱۰ تیم برتر', color: 'bg-teal-500 text-slate-950 font-bold' };
       case CEREMONY_PHASES.PAUSED:
@@ -94,47 +98,51 @@ export const CeremonyControls = ({
   const phaseDetails = getPhaseDetails();
 
   return (
-    <div className="flex flex-col gap-6 text-right select-none animate-fade-in">
+    <div className="flex flex-col gap-6 text-right select-none font-dana animate-fade-in">
       {/* Live Stage Status Monitor Box */}
       <div className="p-6 rounded-3xl bg-slate-950/90 border border-slate-800 shadow-2xl relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-500 via-purple-500 to-amber-500" />
 
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="flex flex-col gap-1.5">
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-400 font-semibold">وضعیت زنده صحنه:</span>
-              <span className={`px-3 py-1 rounded-full text-xs font-bold ${phaseDetails.color}`}>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs text-slate-400 font-semibold font-dana">وضعیت زنده صحنه:</span>
+              <span className={`px-3 py-1 rounded-full text-xs font-peyda font-bold ${phaseDetails.color}`}>
                 {phaseDetails.label}
               </span>
               {isPaused && (
-                <span className="px-2.5 py-0.5 rounded-full bg-red-500/20 text-red-400 text-xs font-bold border border-red-500/30 animate-pulse">
+                <span className="px-2.5 py-0.5 rounded-full bg-red-500/20 text-red-400 text-xs font-bold border border-red-500/30 animate-pulse font-numeric">
                   PAUSED
                 </span>
               )}
+              {currentStepDuration > 0 && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-900 border border-slate-800 text-slate-300 text-xs font-numeric">
+                  <Timer className="w-3.5 h-3.5 text-cyan-400" />
+                  مدت تعلیق این گام: {(currentStepDuration / 1000).toFixed(1)} ثانیه
+                </span>
+              )}
             </div>
-            <h2 className="text-xl md:text-3xl font-black text-white tracking-tight flex items-center gap-2">
+            <h2 className="text-xl md:text-3xl font-rokh font-black text-white tracking-tight flex items-center gap-2">
               <span>گام فعلی:</span>
               <span className="text-cyan-400">
                 {currentStep.type === 'rank'
                   ? `${getRankLabel(currentStep.rank)}`
                   : currentStep.type === 'champion'
                   ? 'رونمایی تیم قهرمان (رتبه ۱)'
-                  : currentStep.type === 'runner_up'
-                  ? 'رونمایی نایب‌قهرمان (رتبه ۲)'
                   : currentStep.type === 'finale_prep'
-                  ? 'آماده‌سازی فینال'
+                  ? 'آماده‌سازی فینال ۲ تیم'
                   : 'جدول کامل اختتامیه'}
               </span>
             </h2>
             {currentTeam && currentStep.type !== 'final_table' && currentStep.type !== 'finale_prep' && (
-              <p className="text-xs md:text-sm text-slate-400">
-                تیم در حال نمایش: <strong className="text-slate-200">{currentTeam.name}</strong> (امتیاز داوری: {currentTeam.score})
+              <p className="text-xs md:text-sm text-slate-400 font-dana">
+                تیم در حال نمایش: <strong className="text-slate-200">{currentTeam.name}</strong> (امتیاز نهایی داوری: {currentTeam.score})
               </p>
             )}
           </div>
 
           {/* Quick Dual-Screen / Fullscreen launchers */}
-          <div className="flex items-center gap-2.5 self-end md:self-auto">
+          <div className="flex items-center gap-2.5 self-end md:self-auto font-peyda">
             <button
               onClick={openProjectorWindow}
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 hover:text-white border border-slate-700 shadow transition font-semibold text-xs md:text-sm cursor-pointer"
@@ -157,12 +165,12 @@ export const CeremonyControls = ({
         {/* Step Progression Bar */}
         <div className="mt-6 pt-5 border-t border-slate-800/80">
           <div className="flex items-center justify-between text-xs text-slate-400 mb-2 font-medium">
-            <span>پیشرفت مراحل اختتامیه:</span>
+            <span className="font-dana">پیشرفت توالی اختتامیه:</span>
             <span className="font-numeric font-bold text-cyan-400">
               مرحله {currentStepIndex + 1} از {sequenceSteps.length}
             </span>
           </div>
-          <div className="grid grid-cols-11 gap-1.5 h-2.5 rounded-full overflow-hidden bg-slate-900 p-0.5">
+          <div className="grid grid-cols-10 gap-1.5 h-2.5 rounded-full overflow-hidden bg-slate-900 p-0.5">
             {sequenceSteps.map((s, idx) => {
               const isPast = idx < currentStepIndex;
               const isCurrent = idx === currentStepIndex;
@@ -170,13 +178,13 @@ export const CeremonyControls = ({
               if (isPast) bg = "bg-cyan-600/70";
               if (isCurrent) bg = "bg-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.8)]";
               if (s.type === 'champion' && (isPast || isCurrent)) bg = "bg-yellow-400";
-              if (s.type === 'runner_up' && (isPast || isCurrent)) bg = "bg-slate-300";
+              if (s.type === 'final_table' && (isPast || isCurrent)) bg = "bg-teal-400";
 
               return (
                 <div
                   key={idx}
                   className={`h-full rounded-sm transition-all duration-300 ${bg}`}
-                  title={`مرحله ${idx + 1}`}
+                  title={`مرحله ${idx + 1}: ${s.type}`}
                 />
               );
             })}
@@ -185,7 +193,7 @@ export const CeremonyControls = ({
       </div>
 
       {/* Main Big Control Buttons */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3 font-peyda">
         {/* Start / Pause / Resume */}
         {isIdle ? (
           <button
@@ -221,7 +229,7 @@ export const CeremonyControls = ({
           title="مرحله بعد (کلید جهت‌نما راست)"
         >
           <SkipForward className="w-5 h-5" />
-          <span>مرحله بعد</span>
+          <span>{currentStep.type === 'champion' ? 'جدول نهایی' : 'مرحله بعد'}</span>
         </button>
 
         {/* Previous Step */}
@@ -250,7 +258,7 @@ export const CeremonyControls = ({
           <span>اجرای مجدد</span>
         </button>
 
-        {/* Instant Reveal (Skip suspense scroll) */}
+        {/* Instant Reveal */}
         <button
           onClick={instantReveal}
           disabled={isIdle || isFinalTable}
@@ -274,8 +282,8 @@ export const CeremonyControls = ({
               <Trophy className="w-5 h-5" />
             </div>
             <div className="text-right">
-              <span className="block font-bold text-sm text-white">پرش مستقیم به جدول نهایی</span>
-              <span className="block text-xs text-slate-400">نمایش یکپارچه کارنامه تمام ۱۰ تیم</span>
+              <span className="block font-peyda font-bold text-sm text-white">پرش مستقیم به جدول نهایی</span>
+              <span className="block font-dana text-xs text-slate-400">نمایش یکپارچه کارنامه تمام ۱۰ تیم</span>
             </div>
           </div>
           <SkipForward className="w-5 h-5 text-slate-500 group-hover:text-cyan-400 transition" />
@@ -288,8 +296,8 @@ export const CeremonyControls = ({
               <Clock className="w-5 h-5" />
             </div>
             <div>
-              <span className="block font-bold text-sm text-white">حالت اجرای خودکار</span>
-              <span className="block text-xs text-slate-400">
+              <span className="block font-peyda font-bold text-sm text-white">حالت اجرای خودکار</span>
+              <span className="block font-dana text-xs text-slate-400">
                 {config.autoAdvance ? "پیشروی خودکار با زمان‌سنج" : "کنترل دستی با دکمه و کیبورد"}
               </span>
             </div>
@@ -315,18 +323,18 @@ export const CeremonyControls = ({
               <RotateCcw className="w-5 h-5" />
             </div>
             <div className="text-right">
-              <span className="block font-bold text-sm text-white group-hover:text-red-200">
+              <span className="block font-peyda font-bold text-sm text-white group-hover:text-red-200">
                 بازنشانی کامل مراسم
               </span>
-              <span className="block text-xs text-slate-400">بازگشت به صفحه آماده‌سازی اول</span>
+              <span className="block font-dana text-xs text-slate-400">بازگشت به صفحه آماده‌سازی اول</span>
             </div>
           </div>
         </button>
       </div>
 
       {/* Keyboard Shortcuts Cheatsheet Card */}
-      <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800/80 flex flex-wrap items-center justify-between gap-4 text-xs text-slate-400">
-        <div className="flex items-center gap-2 text-slate-300 font-semibold">
+      <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800/80 flex flex-wrap items-center justify-between gap-4 text-xs text-slate-400 font-dana">
+        <div className="flex items-center gap-2 text-slate-300 font-semibold font-peyda">
           <Keyboard className="w-4 h-4 text-cyan-400" />
           <span>کلیدهای میانبر مجری در حین اجرای زنده:</span>
         </div>
@@ -360,13 +368,13 @@ export const CeremonyControls = ({
 
       {/* Reset Confirmation Dialog */}
       {resetConfirmOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 font-dana">
           <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-md w-full text-right shadow-2xl">
-            <h3 className="text-lg font-bold text-white mb-2">تأیید بازنشانی وضعیت مراسم</h3>
+            <h3 className="text-lg font-peyda font-bold text-white mb-2">تأیید بازنشانی وضعیت مراسم</h3>
             <p className="text-sm text-slate-300 mb-6">
               آیا مطمئن هستید که می‌خواهید مراسم را از گام اول و صفحه آغازین بازنشانی کنید؟ در طول پخش زنده این کار مراحل را از نو آغاز خواهد کرد.
             </p>
-            <div className="flex items-center justify-end gap-3">
+            <div className="flex items-center justify-end gap-3 font-peyda">
               <button
                 onClick={() => setResetConfirmOpen(false)}
                 className="px-4 py-2 rounded-xl text-slate-400 hover:text-white text-sm"

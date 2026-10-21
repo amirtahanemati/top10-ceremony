@@ -1,13 +1,161 @@
 @import "tailwindcss";
 
+/* ========================================================
+   LOCAL CUSTOM PERSIAN FONTS (Dana, Peyda, Rokh)
+   ======================================================== */
+
+/* DANA FONTS */
+@font-face {
+  font-family: 'Dana';
+  src: url('/fonts/Dana-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Dana';
+  src: url('/fonts/Dana-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Dana';
+  src: url('/fonts/Dana-DemiBold.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Dana';
+  src: url('/fonts/Dana-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* PEYDA FONTS */
+@font-face {
+  font-family: 'Peyda';
+  src: url('/fonts/Peyda-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Peyda';
+  src: url('/fonts/Peyda-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Peyda';
+  src: url('/fonts/Peyda-SemiBold.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Peyda';
+  src: url('/fonts/Peyda-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Peyda';
+  src: url('/fonts/Peyda-ExtraBold.woff2') format('woff2');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Peyda';
+  src: url('/fonts/Peyda-Black.woff2') format('woff2');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ROKH DISPLAY FONTS */
+@font-face {
+  font-family: 'Rokh';
+  src: url('/fonts/Rokh-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Rokh';
+  src: url('/fonts/Rokh-SemiBold.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Rokh';
+  src: url('/fonts/Rokh-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Rokh';
+  src: url('/fonts/Rokh-ExtraBold.woff2') format('woff2');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Rokh';
+  src: url('/fonts/Rokh-UltraBold.woff2') format('woff2');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 @layer base {
   :root {
-    --font-vazir: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    --font-digital: 'Orbitron', monospace;
+    --font-body: 'Dana', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-heading: 'Peyda', 'Dana', sans-serif;
+    --font-display: 'Rokh', 'Peyda', sans-serif;
   }
 
   body {
-    font-family: var(--font-vazir);
+    font-family: var(--font-body);
+  }
+
+  h1, h2, h3, .font-heading {
+    font-family: var(--font-heading);
+  }
+
+  .font-display {
+    font-family: var(--font-display);
+  }
+
+  .font-rokh {
+    font-family: 'Rokh', var(--font-heading);
+  }
+
+  .font-peyda {
+    font-family: 'Peyda', var(--font-heading);
+  }
+
+  .font-dana {
+    font-family: 'Dana', var(--font-body);
   }
 }
 
@@ -27,46 +175,33 @@
   background: #334155;
 }
 
-/* Perspective & 3D styling for reveal cards */
-.perspective-1000 {
-  perspective: 1000px;
-}
-
-.preserve-3d {
-  transform-style: preserve-3d;
-}
-
-.backface-hidden {
-  backface-visibility: hidden;
-}
-
 /* Cinematic glows & gradients */
 .text-glow-cyan {
-  text-shadow: 0 0 20px rgba(6, 182, 212, 0.7), 0 0 40px rgba(6, 182, 212, 0.4);
+  text-shadow: 0 0 20px rgba(6, 182, 212, 0.7), 0 0 45px rgba(6, 182, 212, 0.45);
 }
 
 .text-glow-gold {
-  text-shadow: 0 0 25px rgba(245, 158, 11, 0.8), 0 0 50px rgba(217, 119, 6, 0.5);
+  text-shadow: 0 0 25px rgba(245, 158, 11, 0.85), 0 0 55px rgba(217, 119, 6, 0.55);
 }
 
 .text-glow-purple {
-  text-shadow: 0 0 25px rgba(168, 85, 247, 0.8), 0 0 50px rgba(147, 51, 234, 0.5);
+  text-shadow: 0 0 25px rgba(168, 85, 247, 0.85), 0 0 55px rgba(147, 51, 234, 0.55);
 }
 
 .box-glow-cyan {
-  box-shadow: 0 0 35px -5px rgba(6, 182, 212, 0.35), 0 0 15px -3px rgba(6, 182, 212, 0.2);
+  box-shadow: 0 0 40px -5px rgba(6, 182, 212, 0.4), 0 0 20px -3px rgba(6, 182, 212, 0.25);
 }
 
 .box-glow-gold {
-  box-shadow: 0 0 50px -5px rgba(245, 158, 11, 0.4), 0 0 25px -3px rgba(245, 158, 11, 0.3);
+  box-shadow: 0 0 60px -5px rgba(245, 158, 11, 0.5), 0 0 30px -3px rgba(245, 158, 11, 0.35);
 }
 
 .box-glow-silver {
-  box-shadow: 0 0 40px -5px rgba(203, 213, 225, 0.35), 0 0 20px -3px rgba(148, 163, 184, 0.25);
+  box-shadow: 0 0 45px -5px rgba(203, 213, 225, 0.4), 0 0 25px -3px rgba(148, 163, 184, 0.3);
 }
 
 .box-glow-bronze {
-  box-shadow: 0 0 40px -5px rgba(217, 119, 6, 0.35), 0 0 20px -3px rgba(180, 83, 9, 0.25);
+  box-shadow: 0 0 45px -5px rgba(217, 119, 6, 0.4), 0 0 25px -3px rgba(180, 83, 9, 0.3);
 }
 
 /* Scanning ray animation */
@@ -80,7 +215,7 @@
 }
 
 .animate-sweep {
-  animation: sweep 3.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  animation: sweep 3.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
 @keyframes pulseGlow {
@@ -89,22 +224,22 @@
     transform: scale(1);
   }
   50% {
-    opacity: 0.85;
+    opacity: 0.9;
     transform: scale(1.04);
   }
 }
 
 .animate-pulse-glow {
-  animation: pulseGlow 3s ease-in-out infinite;
+  animation: pulseGlow 2.5s ease-in-out infinite;
 }
 
 @keyframes countdownPop {
   0% {
-    transform: scale(0.6);
+    transform: scale(0.5);
     opacity: 0;
   }
   40% {
-    transform: scale(1.15);
+    transform: scale(1.2);
     opacity: 1;
   }
   80% {
@@ -112,7 +247,7 @@
     opacity: 1;
   }
   100% {
-    transform: scale(0.9);
+    transform: scale(0.92);
     opacity: 0.85;
   }
 }
@@ -121,8 +256,36 @@
   animation: countdownPop 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Numeric font utility */
+/* Dramatic suspense heartbeat */
+@keyframes heartbeat {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  14% {
+    transform: scale(1.12);
+    opacity: 1;
+  }
+  28% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  42% {
+    transform: scale(1.18);
+    opacity: 1;
+  }
+  70% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+}
+
+.animate-heartbeat {
+  animation: heartbeat 1.2s ease-in-out infinite;
+}
+
+/* Numeric font utility with Persian font fallback */
 .font-numeric {
-  font-family: var(--font-digital), var(--font-vazir);
+  font-family: 'Rokh', 'Peyda', 'Dana', monospace;
   font-variant-numeric: tabular-nums;
 }

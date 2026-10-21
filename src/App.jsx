@@ -101,6 +101,7 @@ export default function App() {
           currentStep={engine.currentStep}
           currentTeam={engine.currentTeam}
           countdownNum={engine.countdownNum}
+          scrollingNames={engine.scrollingNames}
           teams={teams}
           config={config}
           isPaused={engine.isPaused}

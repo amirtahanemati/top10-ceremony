@@ -59,7 +59,7 @@ export const AdminDashboard = ({
   ];
 
   return (
-    <div className="min-h-screen bg-[#070a12] text-slate-100 flex flex-col select-none font-sans">
+    <div className="min-h-screen bg-[#070a12] text-slate-100 flex flex-col select-none font-dana">
       {/* Top Admin Header Bar */}
       <header className="sticky top-0 z-40 bg-slate-950/90 border-b border-slate-800/90 backdrop-blur-xl px-4 md:px-8 py-3.5 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -67,20 +67,20 @@ export const AdminDashboard = ({
             <Sparkles className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="text-sm md:text-base font-black text-white flex items-center gap-2">
-              <span>پنل مدیریت و کنترل اختتامیه</span>
+            <h1 className="text-sm md:text-base font-peyda font-black text-white flex items-center gap-2">
+              <span>پنل مدیریت و اتاق فرمان اختتامیه</span>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-numeric font-bold">
-                PRO EVENT V1.0
+                PRO EVENT V2.0
               </span>
             </h1>
-            <p className="text-[11px] text-slate-400">
+            <p className="text-[11px] text-slate-400 font-dana">
               {config.contestTitle || "مسابقه ۱۰ تیم برتر"}
             </p>
           </div>
         </div>
 
         {/* Header Right Actions */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 font-peyda">
           <button
             onClick={onSwitchToStageView}
             className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold text-xs md:text-sm shadow-lg shadow-cyan-950 transition cursor-pointer"
@@ -93,7 +93,7 @@ export const AdminDashboard = ({
       </header>
 
       {/* Navigation Tabs Bar */}
-      <div className="bg-slate-900/60 border-b border-slate-800 px-4 md:px-8 py-2 overflow-x-auto">
+      <div className="bg-slate-900/60 border-b border-slate-800 px-4 md:px-8 py-2 overflow-x-auto font-peyda">
         <div className="flex items-center gap-2 min-w-max">
           {tabs.map((tab) => {
             const Icon = tab.icon;

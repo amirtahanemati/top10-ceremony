@@ -1,21 +1,21 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { soundEngine } from '../services/soundEngine';
-import { fireChampionConfetti, fireRunnerUpConfetti, fireRankBurst } from '../utils/confetti';
+import { fireChampionConfetti, fireRankBurst } from '../utils/confetti';
 import { syncService } from '../services/syncService';
-import { storageService } from '../services/storageService';
 
 export const CEREMONY_PHASES = {
   IDLE: 'IDLE',
   INTRO: 'INTRO',
   COUNTDOWN: 'COUNTDOWN',
   SCROLLING: 'SCROLLING',
-  SLOWING: 'SLOWING',
+  TEASING: 'TEASING',       // Fake slow-down teaser!
+  REACCEL: 'REACCEL',       // Sudden burst of speed again!
+  SLOWING: 'SLOWING',       // Final deceleration
   DRAMATIC_PAUSE: 'DRAMATIC_PAUSE',
   REVEAL: 'REVEAL',
   HOLDING: 'HOLDING',
   FINALE_PREP: 'FINALE_PREP',
   CHAMPION_REVEAL: 'CHAMPION_REVEAL',
-  RUNNER_UP_REVEAL: 'RUNNER_UP_REVEAL',
   FINAL_TABLE: 'FINAL_TABLE',
   PAUSED: 'PAUSED',
 };
@@ -28,13 +28,15 @@ export function useCeremonyEngine(teams, config, onConfigChange) {
   const [revealedRanks, setRevealedRanks] = useState(new Set());
   const [isPaused, setIsPaused] = useState(false);
   const [prevPhaseBeforePause, setPrevPhaseBeforePause] = useState(null);
+  const [currentStepDuration, setCurrentStepDuration] = useState(0);
 
   const timerRef = useRef(null);
+  const subTimersRef = useRef([]);
   const scrollTickIntervalRef = useRef(null);
 
-  // Define ceremony sequence based on config (Champion first or Runner-up first)
-  const sequenceSteps = useRef([]);
-
+  // Define ceremony sequence:
+  // Ranks 10 down to 3 -> Finale Prep -> Champion (Rank 1) -> DIRECTLY Final Table!
+  // (No separate scroll/countdown for runner-up, as requested)
   const buildSequence = useCallback(() => {
     const steps = [];
     // Ranks 10 down to 3
@@ -44,19 +46,15 @@ export function useCeremonyEngine(teams, config, onConfigChange) {
     // Finale Prep
     steps.push({ type: 'finale_prep' });
 
-    if (config.championFirst !== false) {
-      // DEFAULT: Champion (Rank 1) first, then Runner-Up (Rank 2)
-      steps.push({ type: 'champion', rank: 1 });
-      steps.push({ type: 'runner_up', rank: 2 });
-    } else {
-      steps.push({ type: 'runner_up', rank: 2 });
-      steps.push({ type: 'champion', rank: 1 });
-    }
+    // Champion (Rank 1)
+    steps.push({ type: 'champion', rank: 1 });
 
-    // Final Table
+    // DIRECTLY TO FINAL TABLE (skipping runner-up scroll as requested)
     steps.push({ type: 'final_table' });
     return steps;
-  }, [config.championFirst]);
+  }, []);
+
+  const sequenceSteps = useRef(buildSequence());
 
   useEffect(() => {
     sequenceSteps.current = buildSequence();
@@ -67,6 +65,9 @@ export function useCeremonyEngine(teams, config, onConfigChange) {
       clearTimeout(timerRef.current);
       timerRef.current = null;
     }
+    subTimersRef.current.forEach((t) => clearTimeout(t));
+    subTimersRef.current = [];
+
     if (scrollTickIntervalRef.current) {
       clearInterval(scrollTickIntervalRef.current);
       scrollTickIntervalRef.current = null;
@@ -76,6 +77,26 @@ export function useCeremonyEngine(teams, config, onConfigChange) {
   const currentStep = sequenceSteps.current[currentStepIndex] || { type: 'rank', rank: 10 };
   const currentTeam = teams.find((t) => t.rank === currentStep.rank) || teams[0];
 
+  // Calculate dynamic suspense duration based on rank:
+  // As fewer teams remain (closer to 1), suspense time is dramatically increased!
+  const getDynamicSuspenseDuration = useCallback((rank) => {
+    const baseSeconds = config.scrollDurationSeconds || 5.0;
+    // Multipliers for rank 10 down to 1
+    const multipliers = {
+      10: 1.0,   // e.g. 5.0s
+      9: 1.2,    // e.g. 6.0s
+      8: 1.45,   // e.g. 7.25s
+      7: 1.75,   // e.g. 8.75s
+      6: 2.1,    // e.g. 10.5s
+      5: 2.5,    // e.g. 12.5s
+      4: 2.95,   // e.g. 14.75s
+      3: 3.4,    // e.g. 17.0s
+      1: 4.2,    // e.g. 21.0s (Grand Champion Duel!)
+    };
+    const mult = multipliers[rank] || 1.5;
+    return baseSeconds * mult * 1000;
+  }, [config.scrollDurationSeconds]);
+
   // Broadcast current state to synced audience stage windows
   const broadcastCurrentState = useCallback((customState = {}) => {
     syncService.broadcast('STATE_UPDATE', {
@@ -84,14 +105,14 @@ export function useCeremonyEngine(teams, config, onConfigChange) {
       currentStep: customState.currentStep || currentStep,
       countdownNum: customState.countdownNum ?? countdownNum,
       isPaused: customState.isPaused ?? isPaused,
+      revealedRanks: Array.from(revealedRanks),
       config,
     });
-  }, [phase, currentStepIndex, currentStep, countdownNum, isPaused, config]);
+  }, [phase, currentStepIndex, currentStep, countdownNum, isPaused, revealedRanks, config]);
 
-  // Sync state broadcast on major changes
   useEffect(() => {
     broadcastCurrentState();
-  }, [phase, currentStepIndex, isPaused, countdownNum, broadcastCurrentState]);
+  }, [phase, currentStepIndex, isPaused, countdownNum, revealedRanks, broadcastCurrentState]);
 
   // Handle countdown loop
   const startCountdown = useCallback(() => {
@@ -110,7 +131,7 @@ export function useCeremonyEngine(teams, config, onConfigChange) {
           runCount();
         } else {
           soundEngine.playCountdownBeep(true);
-          // Proceed to first reveal step (Rank 10)
+          // Start first step (Rank 10)
           startStep(0);
         }
       }, 1000);
@@ -131,11 +152,11 @@ export function useCeremonyEngine(teams, config, onConfigChange) {
 
     if (step.type === 'finale_prep') {
       setPhase(CEREMONY_PHASES.FINALE_PREP);
-      soundEngine.startTensionDrone();
+      soundEngine.startTensionDrone(2);
       if (config.autoAdvance) {
         timerRef.current = setTimeout(() => {
           startStep(stepIdx + 1);
-        }, 4000);
+        }, 5500);
       }
       return;
     }
@@ -146,88 +167,128 @@ export function useCeremonyEngine(teams, config, onConfigChange) {
       return;
     }
 
-    // Step is rank reveal (rank 10..3, or rank 1 champion, or rank 2 runner-up)
+    // Step is rank reveal (10..3, or 1 champion)
     setPhase(CEREMONY_PHASES.SCROLLING);
-    soundEngine.startTensionDrone();
+    soundEngine.startTensionDrone(step.rank);
 
-    // Prepare rolling pool of candidate team names (only from valid pool)
-    const pool = teams.map((t) => t.name);
-    setScrollingNames(pool);
+    // CRUCIAL REQUIREMENT: Filter out already revealed teams from the candidate pool!
+    // As teams are revealed, they are permanently removed from the reel!
+    const unrevealedTeams = teams.filter((t) => !revealedRanks.has(t.rank));
+    const pool = unrevealedTeams.map((t) => t.name);
+    // If somehow pool is empty, fallback to target team
+    setScrollingNames(pool.length > 0 ? pool : [currentTeam.name]);
 
-    // Dynamic mechanical sound ticks
-    let tickSpeed = 70;
+    // Compute prolonged dynamic suspense duration for this rank
+    const totalDuration = getDynamicSuspenseDuration(step.rank);
+    setCurrentStepDuration(totalDuration);
+
+    // Start fast ticks
+    let tickSpeed = 55;
     scrollTickIntervalRef.current = setInterval(() => {
       soundEngine.playScrollTick(1.0);
     }, tickSpeed);
 
-    // Duration of full scroll
-    const scrollDuration = (config.scrollDurationSeconds || 3.5) * 1000;
-    const slowStart = scrollDuration * 0.65;
+    // Dynamic suspense timeline with multiple teasers:
+    // 1. Initial hyper spin (0 to 40% of duration)
+    // 2. Fake slow-down / teaser (at 40% of duration)
+    // 3. Sudden re-acceleration (at 55% of duration)
+    // 4. Final deceleration & riser (at 75% of duration)
+    // 5. Dramatic pause cutoff (at 92% of duration)
+    // 6. Reveal moment! (at 100%)
 
-    // Deceleration phase
-    timerRef.current = setTimeout(() => {
-      setPhase(CEREMONY_PHASES.SLOWING);
-      soundEngine.playTensionRiser(1.4);
+    const tTeaser = totalDuration * 0.40;
+    const tReaccel = totalDuration * 0.55;
+    const tFinalSlow = totalDuration * 0.72;
+    const tPause = totalDuration * 0.92;
+
+    // 1 -> 2: Fake slow-down teaser
+    const id1 = setTimeout(() => {
+      setPhase(CEREMONY_PHASES.TEASING);
+      soundEngine.playTeaseBrake();
       if (scrollTickIntervalRef.current) {
         clearInterval(scrollTickIntervalRef.current);
         scrollTickIntervalRef.current = setInterval(() => {
-          soundEngine.playScrollTick(0.5);
-        }, 180);
+          soundEngine.playScrollTick(0.6);
+        }, 220);
       }
+    }, tTeaser);
+    subTimersRef.current.push(id1);
 
-      // Dramatic pause cutoff
-      timerRef.current = setTimeout(() => {
-        if (scrollTickIntervalRef.current) {
-          clearInterval(scrollTickIntervalRef.current);
-          scrollTickIntervalRef.current = null;
-        }
-        setPhase(CEREMONY_PHASES.DRAMATIC_PAUSE);
-        soundEngine.playDramaticPause();
+    // 2 -> 3: Re-accelerate!
+    const id2 = setTimeout(() => {
+      setPhase(CEREMONY_PHASES.REACCEL);
+      if (scrollTickIntervalRef.current) {
+        clearInterval(scrollTickIntervalRef.current);
+        scrollTickIntervalRef.current = setInterval(() => {
+          soundEngine.playScrollTick(1.2);
+        }, 45);
+      }
+    }, tReaccel);
+    subTimersRef.current.push(id2);
 
-        // Reveal Moment!
-        timerRef.current = setTimeout(() => {
-          revealRank(step);
-        }, 600);
-      }, scrollDuration - slowStart);
-    }, slowStart);
-  }, [config.scrollDurationSeconds, config.autoAdvance, teams]);
+    // 3 -> 4: Final heavy deceleration
+    const id3 = setTimeout(() => {
+      setPhase(CEREMONY_PHASES.SLOWING);
+      soundEngine.playTensionRiser(2.5);
+      if (scrollTickIntervalRef.current) {
+        clearInterval(scrollTickIntervalRef.current);
+        scrollTickIntervalRef.current = setInterval(() => {
+          soundEngine.playScrollTick(0.4);
+        }, 320);
+      }
+    }, tFinalSlow);
+    subTimersRef.current.push(id3);
+
+    // 4 -> 5: Dramatic pause cutoff
+    const id4 = setTimeout(() => {
+      if (scrollTickIntervalRef.current) {
+        clearInterval(scrollTickIntervalRef.current);
+        scrollTickIntervalRef.current = null;
+      }
+      setPhase(CEREMONY_PHASES.DRAMATIC_PAUSE);
+      soundEngine.playDramaticPause();
+    }, tPause);
+    subTimersRef.current.push(id4);
+
+    // 5 -> 6: The grand reveal!
+    const id5 = setTimeout(() => {
+      revealRank(step);
+    }, totalDuration);
+    subTimersRef.current.push(id5);
+
+  }, [teams, revealedRanks, currentTeam, getDynamicSuspenseDuration, config.autoAdvance]);
 
   // Reveal the rank with dramatic animations and audio fanfare
   const revealRank = useCallback((step) => {
     clearAllTimers();
     soundEngine.stopTensionDrone();
 
+    // Mark rank as permanently revealed so it won't appear in subsequent scrollers
     setRevealedRanks((prev) => new Set([...prev, step.rank]));
 
     if (step.type === 'champion' || step.rank === 1) {
       setPhase(CEREMONY_PHASES.CHAMPION_REVEAL);
       soundEngine.playChampionFanfare();
       fireChampionConfetti();
-    } else if (step.type === 'runner_up' || step.rank === 2) {
-      setPhase(CEREMONY_PHASES.RUNNER_UP_REVEAL);
-      soundEngine.playRunnerUpFanfare();
-      fireRunnerUpConfetti();
     } else {
       setPhase(CEREMONY_PHASES.REVEAL);
       soundEngine.playRevealImpact(step.rank);
       fireRankBurst(step.rank);
     }
 
-    // Auto advance if configured
     if (config.autoAdvance) {
-      const holdTime = (config.holdDurationSeconds || 4.5) * 1000;
+      const holdTime = (config.holdDurationSeconds || 5.0) * 1000;
       timerRef.current = setTimeout(() => {
         nextStep();
       }, holdTime);
     } else {
-      // In manual mode, we transition to HOLDING after impact
       timerRef.current = setTimeout(() => {
         setPhase(CEREMONY_PHASES.HOLDING);
-      }, 1200);
+      }, 1500);
     }
   }, [config.autoAdvance, config.holdDurationSeconds]);
 
-  // Operator Action: Start Ceremony
+  // Start Ceremony
   const startCeremony = useCallback(() => {
     soundEngine.init();
     soundEngine.playCeremonyStart();
@@ -236,10 +297,10 @@ export function useCeremonyEngine(teams, config, onConfigChange) {
 
     timerRef.current = setTimeout(() => {
       startCountdown();
-    }, 2800);
+    }, 3200);
   }, [startCountdown]);
 
-  // Operator Action: Pause / Resume
+  // Pause / Resume
   const togglePause = useCallback(() => {
     if (phase === CEREMONY_PHASES.IDLE) {
       startCeremony();
@@ -247,21 +308,20 @@ export function useCeremonyEngine(teams, config, onConfigChange) {
     }
 
     if (isPaused) {
-      // Resume
       setIsPaused(false);
       setPhase(prevPhaseBeforePause || CEREMONY_PHASES.HOLDING);
-      soundEngine.startTensionDrone();
+      soundEngine.startTensionDrone(currentStep.rank);
     } else {
-      // Pause
       clearAllTimers();
       setPrevPhaseBeforePause(phase);
       setIsPaused(true);
       setPhase(CEREMONY_PHASES.PAUSED);
       soundEngine.stopTensionDrone();
     }
-  }, [phase, isPaused, prevPhaseBeforePause, startCeremony]);
+  }, [phase, isPaused, prevPhaseBeforePause, currentStep, startCeremony]);
 
-  // Operator Action: Next Step
+  // Next Step:
+  // When Champion is currently shown, nextStep goes DIRECTLY to final table!
   const nextStep = useCallback(() => {
     clearAllTimers();
     setIsPaused(false);
@@ -274,7 +334,7 @@ export function useCeremonyEngine(teams, config, onConfigChange) {
     }
   }, [currentStepIndex, startStep]);
 
-  // Operator Action: Previous Step
+  // Previous Step
   const prevStep = useCallback(() => {
     clearAllTimers();
     setIsPaused(false);
@@ -282,14 +342,14 @@ export function useCeremonyEngine(teams, config, onConfigChange) {
     startStep(prevIdx);
   }, [currentStepIndex, startStep]);
 
-  // Operator Action: Replay Current Step
+  // Replay Current Step
   const replayCurrentStep = useCallback(() => {
     clearAllTimers();
     setIsPaused(false);
     startStep(currentStepIndex);
   }, [currentStepIndex, startStep]);
 
-  // Operator Action: Instant Reveal (Skip scroll directly to reveal)
+  // Instant Reveal
   const instantReveal = useCallback(() => {
     clearAllTimers();
     setIsPaused(false);
@@ -299,7 +359,7 @@ export function useCeremonyEngine(teams, config, onConfigChange) {
     }
   }, [currentStepIndex, revealRank]);
 
-  // Operator Action: Jump directly to final leaderboard
+  // Jump to Final Table
   const jumpToFinalTable = useCallback(() => {
     clearAllTimers();
     setIsPaused(false);
@@ -309,7 +369,7 @@ export function useCeremonyEngine(teams, config, onConfigChange) {
     soundEngine.playLeaderboardEntry();
   }, []);
 
-  // Operator Action: Reset to Idle
+  // Reset to Idle
   const resetCeremony = useCallback(() => {
     clearAllTimers();
     soundEngine.stopTensionDrone();
@@ -320,10 +380,9 @@ export function useCeremonyEngine(teams, config, onConfigChange) {
     setCountdownNum(config.countdownSeconds || 5);
   }, [config.countdownSeconds]);
 
-  // Global hotkeys listener
+  // Hotkeys
   useEffect(() => {
     const handleKeyDown = (e) => {
-      // Don't trigger shortcuts if typing inside an input/textarea
       const tag = e.target.tagName.toLowerCase();
       if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
 
@@ -351,7 +410,6 @@ export function useCeremonyEngine(teams, config, onConfigChange) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [togglePause, nextStep, prevStep, replayCurrentStep, config, onConfigChange]);
 
-  // Clean up timers on unmount
   useEffect(() => {
     return () => {
       clearAllTimers();
@@ -369,6 +427,7 @@ export function useCeremonyEngine(teams, config, onConfigChange) {
     revealedRanks,
     isPaused,
     sequenceSteps: sequenceSteps.current,
+    currentStepDuration,
     startCeremony,
     togglePause,
     nextStep,
